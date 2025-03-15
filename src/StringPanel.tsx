@@ -1,6 +1,13 @@
-import { PanelExtensionContext, Topic, MessageEvent } from "@foxglove/extension";
-import { useLayoutEffect, useEffect, useState, useMemo } from "react";
+import {
+  MessageEvent,
+  PanelExtensionContext,
+  Topic,
+  SettingsTreeAction,
+} from "@foxglove/extension";
+import { useLayoutEffect, useEffect, useState, useMemo, useCallback } from "react";
 import { createRoot } from "react-dom/client";
+import { produce } from "immer";
+import { set } from "lodash";
 
 // String message type
 type StringMessage = {
@@ -10,8 +17,16 @@ type StringMessage = {
 type StringMessageEvent = MessageEvent<StringMessage>;
 
 type PanelState = {
-  topic?: string;
-  fontSize: number;
+  data: {
+    label: string;
+    topic?: string;
+    visible: boolean;
+  };
+  appearance: {
+    fontSize: number;
+    backgroundColor: string;
+    fontColor: string;
+  };
 };
 
 function StringPanel({ context }: { context: PanelExtensionContext }): JSX.Element {
@@ -23,8 +38,16 @@ function StringPanel({ context }: { context: PanelExtensionContext }): JSX.Eleme
   const [state, setState] = useState<PanelState>(() => {
     const initialState = context.initialState as Partial<PanelState>;
     return { 
-      topic: initialState?.topic,
-      fontSize: initialState?.fontSize ?? 14 // デフォルトのフォントサイズを14pxに設定
+      data: {
+        label: initialState?.data?.label ?? "String Data",
+        topic: initialState?.data?.topic,
+        visible: initialState?.data?.visible ?? true,
+      },
+      appearance: {
+        fontSize: initialState?.appearance?.fontSize ?? 14,
+        backgroundColor: initialState?.appearance?.backgroundColor ?? "#f9f9f9",
+        fontColor: initialState?.appearance?.fontColor ?? "#000000"
+      }
     };
   });
 
@@ -37,22 +60,91 @@ function StringPanel({ context }: { context: PanelExtensionContext }): JSX.Eleme
     [topics],
   );
 
-  useEffect(() => {
-    // Save our state to the layout when the topic or fontSize changes.
-    context.saveState({ topic: state.topic, fontSize: state.fontSize });
+  // Respond to actions from the settings editor to update our state.
+  const actionHandler = useCallback(
+    (action: SettingsTreeAction) => {
+      if (action.action === "update") {
+        const { path, value } = action.payload;
+        // Use immer and lodash to produce a new state object
+        setState(produce((draft) => set(draft, path, value)));
 
-    if (state.topic) {
+        // If the topic was changed update our subscriptions.
+        if (path[1] === "topic") {
+          context.subscribe([{ topic: value as string }]);
+        }
+      }
+    },
+    [context],
+  );
+
+  // Update the settings editor when state or available topics change
+  useEffect(() => {
+    context.saveState(state);
+
+    const topicOptions = stringTopics.map((topic) => ({ value: topic.name, label: topic.name }));
+
+    context.updatePanelSettingsEditor({
+      actionHandler,
+      nodes: {
+        data: {
+          label: state.data.label,
+          renamable: true,
+          visible: state.data.visible,
+          // Foxgloveで利用可能なアイコン名を使用
+          icon: "Cube",
+          fields: {
+            topic: {
+              label: "Topic",
+              input: "select",
+              options: topicOptions,
+              value: state.data.topic,
+            },
+          },
+        },
+        appearance: {
+          label: "Appearance",
+          // Foxgloveで利用可能なアイコン名を使用
+          icon: "Shapes",
+          fields: {
+            fontSize: {
+              label: "Font Size",
+              input: "number",
+              min: 8,
+              max: 32,
+              step: 1,
+              value: state.appearance.fontSize,
+            },
+            backgroundColor: {
+              label: "Background Color",
+              input: "string",
+              value: state.appearance.backgroundColor,
+            },
+            fontColor: {
+              label: "Font Color",
+              input: "string",
+              value: state.appearance.fontColor,
+            },
+          },
+        },
+      },
+    });
+  }, [context, actionHandler, state, stringTopics]);
+
+  useEffect(() => {
+    if (state.data.topic) {
       // Subscribe to the new string topic when a new topic is chosen.
-      context.subscribe([{ topic: state.topic }]);
+      context.subscribe([{ topic: state.data.topic }]);
     }
-  }, [context, state.topic, state.fontSize]);
+  }, [context, state.data.topic]);
 
   // Choose our first available string topic as a default once we have a list of topics available.
   useEffect(() => {
-    if (state.topic == undefined) {
-      setState((prevState) => ({ ...prevState, topic: stringTopics[0]?.name }));
+    if (state.data.topic == undefined && stringTopics.length > 0) {
+      setState(produce((draft) => {
+        draft.data.topic = stringTopics[0]?.name;
+      }));
     }
-  }, [state.topic, stringTopics]);
+  }, [state.data.topic, stringTopics]);
 
   // Setup our onRender function and start watching topics and currentFrame for messages.
   useLayoutEffect(() => {
@@ -75,44 +167,9 @@ function StringPanel({ context }: { context: PanelExtensionContext }): JSX.Eleme
     renderDone?.();
   }, [renderDone]);
 
-  // フォントサイズの変更ハンドラー
-  const handleFontSizeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newSize = parseInt(e.target.value, 10);
-    setState((prevState) => ({ ...prevState, fontSize: newSize }));
-  };
-
   return (
     <div style={{ height: "100%", padding: "1rem" }}>
-      <div style={{ paddingBottom: "1rem", display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flex: "1" }}>
-          <label>Choose a topic:</label>
-          <select
-            value={state.topic}
-            onChange={(event) => {
-              setState((prevState) => ({ ...prevState, topic: event.target.value }));
-            }}
-            style={{ flex: 1 }}
-          >
-            {stringTopics.map((topic) => (
-              <option key={topic.name} value={topic.name}>
-                {topic.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        
-        <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <label>Font size: {state.fontSize}px</label>
-          <input
-            type="range"
-            min="8"
-            max="32"
-            value={state.fontSize}
-            onChange={handleFontSizeChange}
-            style={{ width: "100px" }}
-          />
-        </div>
-      </div>
+      <h2>{state.data.label}</h2>
       
       <div 
         style={{ 
@@ -122,10 +179,10 @@ function StringPanel({ context }: { context: PanelExtensionContext }): JSX.Eleme
           minHeight: "100px",
           maxHeight: "400px",
           overflowY: "auto",
-          backgroundColor: "#f9f9f9",
+          backgroundColor: state.appearance.backgroundColor,
           fontFamily: "monospace",
-          color: "#000000",
-          fontSize: `${state.fontSize}px` // 設定されたフォントサイズを適用
+          color: state.appearance.fontColor,
+          fontSize: `${state.appearance.fontSize}px`
         }}
       >
         {message ? message.message.data : "No message received yet"}
