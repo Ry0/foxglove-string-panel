@@ -1,5 +1,7 @@
-# extension-demo version history
+# kabu.string-panel version history
 
-## 0.0.0
+## 1.0.0
 
-- Alpha testing
+* Selection of text topics
+* Font size adjustment
+* Customization of background and font colors
