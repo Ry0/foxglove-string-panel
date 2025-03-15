@@ -30,7 +30,10 @@ function StringPanel({ context }: { context: PanelExtensionContext }): JSX.Eleme
 
   // Filter all of our topics to find the ones with a String message.
   const stringTopics = useMemo(
-    () => (topics ?? []).filter((topic) => topic.schemaName === "std_msgs/msg/String"),
+    () => (topics ?? []).filter((topic) =>
+      topic.schemaName === "std_msgs/msg/String" || 
+      topic.schemaName === "std_msgs/String"
+    ),
     [topics],
   );
 
