@@ -1,9 +1,4 @@
-import {
-  MessageEvent,
-  PanelExtensionContext,
-  Topic,
-  SettingsTreeAction,
-} from "@foxglove/extension";
+import { PanelExtensionContext, Topic, MessageEvent, SettingsTreeAction } from "@foxglove/extension";
 import { useLayoutEffect, useEffect, useState, useMemo, useCallback } from "react";
 import { createRoot } from "react-dom/client";
 import { produce } from "immer";
@@ -26,8 +21,28 @@ type PanelState = {
     fontSize: number;
     backgroundColor: string;
     fontColor: string;
+    fontFamily: string;
   };
 };
+
+// 日本語表示に適したクロスプラットフォームフォントの選択肢
+const fontOptions = [
+  // 日本語フォントファミリー（OS共通のフォールバック設定を含む）
+  { value: "'Noto Sans JP', 'Hiragino Sans', 'Meiryo', 'Yu Gothic', sans-serif", label: "sans-serif" },
+  { value: "'Noto Serif JP', 'Hiragino Mincho ProN', 'Yu Mincho', serif", label: "serif" },
+  
+  // モノスペースフォント（コードやテキスト表示に適した）
+  { value: "'Source Code Pro', 'Consolas', 'Courier New', monospace", label: "monospace" },
+  
+  // 英語フォントのサンセリフ系（日本語フォールバック付き）
+  { value: "'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif", label: "Helvetica" },
+  { value: "'Segoe UI', 'Yu Gothic UI', 'Meiryo UI', sans-serif", label: "Segoe UI" },
+  { value: "'Roboto', 'Noto Sans JP', sans-serif", label: "Roboto" },
+  
+  // 英語フォントのセリフ系（日本語フォールバック付き）
+  { value: "'Times New Roman', 'YuMincho', 'Hiragino Mincho ProN', serif", label: "Times" },
+  { value: "'Georgia', 'YuMincho', 'Hiragino Mincho ProN', serif", label: "Georgia" },
+];
 
 function StringPanel({ context }: { context: PanelExtensionContext }): JSX.Element {
   const [topics, setTopics] = useState<readonly Topic[] | undefined>();
@@ -46,7 +61,9 @@ function StringPanel({ context }: { context: PanelExtensionContext }): JSX.Eleme
       appearance: {
         fontSize: initialState?.appearance?.fontSize ?? 14,
         backgroundColor: initialState?.appearance?.backgroundColor ?? "#f9f9f9",
-        fontColor: initialState?.appearance?.fontColor ?? "#000000"
+        fontColor: initialState?.appearance?.fontColor ?? "#000000",
+        // 日本語対応フォントをデフォルトに設定
+        fontFamily: initialState?.appearance?.fontFamily ?? "'Noto Sans JP', 'Hiragino Sans', 'Meiryo', 'Yu Gothic', sans-serif"
       }
     };
   });
@@ -90,7 +107,6 @@ function StringPanel({ context }: { context: PanelExtensionContext }): JSX.Eleme
           label: state.data.label,
           renamable: true,
           visible: state.data.visible,
-          // Foxgloveで利用可能なアイコン名を使用
           icon: "Cube",
           fields: {
             topic: {
@@ -103,7 +119,6 @@ function StringPanel({ context }: { context: PanelExtensionContext }): JSX.Eleme
         },
         appearance: {
           label: "Appearance",
-          // Foxgloveで利用可能なアイコン名を使用
           icon: "Shapes",
           fields: {
             fontSize: {
@@ -114,15 +129,21 @@ function StringPanel({ context }: { context: PanelExtensionContext }): JSX.Eleme
               step: 1,
               value: state.appearance.fontSize,
             },
-            backgroundColor: {
-              label: "Background Color",
-              input: "string",
-              value: state.appearance.backgroundColor,
+            fontFamily: {
+              label: "Font",
+              input: "select",
+              options: fontOptions,
+              value: state.appearance.fontFamily,
             },
             fontColor: {
               label: "Font Color",
               input: "string",
               value: state.appearance.fontColor,
+            },
+            backgroundColor: {
+              label: "Background Color",
+              input: "string",
+              value: state.appearance.backgroundColor,
             },
           },
         },
@@ -169,7 +190,7 @@ function StringPanel({ context }: { context: PanelExtensionContext }): JSX.Eleme
 
   return (
     <div style={{ height: "100%", padding: "1rem" }}>
-      <h2>{state.data.label}</h2>
+      <h2>{state.data.topic ?? "Choose a topic in settings"}</h2>
       
       <div 
         style={{ 
@@ -180,9 +201,11 @@ function StringPanel({ context }: { context: PanelExtensionContext }): JSX.Eleme
           maxHeight: "400px",
           overflowY: "auto",
           backgroundColor: state.appearance.backgroundColor,
-          fontFamily: "monospace",
+          fontFamily: state.appearance.fontFamily,
           color: state.appearance.fontColor,
-          fontSize: `${state.appearance.fontSize}px`
+          fontSize: `${state.appearance.fontSize}px`,
+          lineHeight: "1.5", // 日本語表示に適した行間
+          wordBreak: "break-word" // 長い日本語テキストの折り返し
         }}
       >
         {message ? message.message.data : "No message received yet"}
