@@ -189,17 +189,16 @@ function StringPanel({ context }: { context: PanelExtensionContext }): JSX.Eleme
   }, [renderDone]);
 
   return (
-    <div style={{ height: "100%", padding: "1rem" }}>
-      <h2>{state.data.topic ?? "Choose a topic in settings"}</h2>
+    <div style={{ height: "100%", display: "flex", flexDirection: "column", padding: "1rem" }}>
+      <h2 style={{ marginTop: 0 }}>{state.data.topic ?? "Choose a topic in settings"}</h2>
       
       <div 
         style={{ 
           border: "1px solid #ccc", 
           borderRadius: "4px", 
           padding: "1rem", 
-          minHeight: "100px",
-          maxHeight: "400px",
-          overflowY: "auto",
+          flex: 1,
+          overflow: "auto",
           backgroundColor: state.appearance.backgroundColor,
           fontFamily: state.appearance.fontFamily,
           color: state.appearance.fontColor,
