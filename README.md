@@ -1,5 +1,8 @@
 # foxglove-string-panel
 
+[demo.webm](https://github.com/user-attachments/assets/5f8afb74-e361-4c06-a717-c433b3327622)
+
+
 [Foxglove](https://foxglove.dev) allows developers to create [extensions](https://docs.foxglove.dev/docs/visualization/extensions/introduction), or custom code that is loaded and executed inside the Foxglove application. This can be used to add custom panels. Extensions are authored in TypeScript using the `@foxglove/extension` SDK.
 
 ## Develop
