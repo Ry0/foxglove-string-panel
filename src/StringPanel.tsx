@@ -25,14 +25,20 @@ type PanelState = {
   };
 };
 
+// デフォルトカラー設定
+const DEFAULT_COLORS = {
+  backgroundColor: "#27272b",
+  fontColor: "#e1e1e4",
+};
+
 // 日本語表示に適したクロスプラットフォームフォントの選択肢
 const fontOptions = [
+  // モノスペースフォント（コードやテキスト表示に適した）
+  { value: "'Source Code Pro', 'Consolas', 'Courier New', monospace", label: "monospace" },
+
   // 日本語フォントファミリー（OS共通のフォールバック設定を含む）
   { value: "'Noto Sans JP', 'Hiragino Sans', 'Meiryo', 'Yu Gothic', sans-serif", label: "sans-serif" },
   { value: "'Noto Serif JP', 'Hiragino Mincho ProN', 'Yu Mincho', serif", label: "serif" },
-  
-  // モノスペースフォント（コードやテキスト表示に適した）
-  { value: "'Source Code Pro', 'Consolas', 'Courier New', monospace", label: "monospace" },
   
   // 英語フォントのサンセリフ系（日本語フォールバック付き）
   { value: "'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif", label: "Helvetica" },
@@ -60,10 +66,9 @@ function StringPanel({ context }: { context: PanelExtensionContext }): JSX.Eleme
       },
       appearance: {
         fontSize: initialState?.appearance?.fontSize ?? 14,
-        backgroundColor: initialState?.appearance?.backgroundColor ?? "#f9f9f9",
-        fontColor: initialState?.appearance?.fontColor ?? "#000000",
-        // 日本語対応フォントをデフォルトに設定
-        fontFamily: initialState?.appearance?.fontFamily ?? "'Noto Sans JP', 'Hiragino Sans', 'Meiryo', 'Yu Gothic', sans-serif"
+        backgroundColor: initialState?.appearance?.backgroundColor ?? DEFAULT_COLORS.backgroundColor,
+        fontColor: initialState?.appearance?.fontColor ?? DEFAULT_COLORS.fontColor, 
+        fontFamily: initialState?.appearance?.fontFamily ?? "'Source Code Pro', 'Consolas', 'Courier New', monospace"
       }
     };
   });
@@ -137,13 +142,13 @@ function StringPanel({ context }: { context: PanelExtensionContext }): JSX.Eleme
             },
             fontColor: {
               label: "Font Color",
-              input: "string",
-              value: state.appearance.fontColor,
+              input: "rgb",
+              value: state.appearance.fontColor || DEFAULT_COLORS.fontColor,
             },
             backgroundColor: {
               label: "Background Color",
-              input: "string",
-              value: state.appearance.backgroundColor,
+              input: "rgb",
+              value: state.appearance.backgroundColor || DEFAULT_COLORS.backgroundColor,
             },
           },
         },
@@ -194,8 +199,7 @@ function StringPanel({ context }: { context: PanelExtensionContext }): JSX.Eleme
       
       <div 
         style={{ 
-          border: "1px solid #ccc", 
-          borderRadius: "4px", 
+          borderRadius: "2px", 
           padding: "1rem", 
           flex: 1,
           overflow: "auto",
